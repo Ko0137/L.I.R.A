@@ -48,13 +48,57 @@ function containsAny(input: string, ...keywords: string[]): boolean {
   return keywords.some(kw => input.includes(kw));
 }
 
+// Math evaluation for queries like "25 * 4", "посчитай 120 + 350", "15% от 5000"
+function tryCalculateMath(input: string): string | null {
+  const clean = input.toLowerCase()
+    .replace(/^(посчитай|вычисли|сколько будет|сколько|реши|калькулятор)\s*/i, '')
+    .trim();
+
+  // Percentage check: "15% от 6000", "20 процентов от 450"
+  const percentMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:%|процент[а-я]*)\s*(?:от|из)\s*(\d+(?:[.,]\d+)?)/);
+  if (percentMatch) {
+    const p = parseFloat(percentMatch[1].replace(',', '.'));
+    const total = parseFloat(percentMatch[2].replace(',', '.'));
+    const res = (p / 100) * total;
+    return `📊 **${p}% от ${total}** = **${res.toLocaleString('ru-RU')}**`;
+  }
+
+  // Square root: "корень из 144", "sqrt 64"
+  const sqrtMatch = clean.match(/(?:корень из|sqrt)\s*(\d+(?:[.,]\d+)?)/);
+  if (sqrtMatch) {
+    const val = parseFloat(sqrtMatch[1].replace(',', '.'));
+    const res = Math.sqrt(val);
+    return `📐 **Квадратный корень из ${val}** = **${res}**`;
+  }
+
+  // Standard arithmetic expression: e.g. "25 * 4", "1200 / 3", "450 + 550"
+  const exprMatch = clean.replace(/х/g, '*').replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.');
+  if (/^[\d\s+\-*/().^]+$/.test(exprMatch) && /[+\-*/^]/.test(exprMatch)) {
+    try {
+      const sanitized = exprMatch.replace(/\^/g, '**');
+      // eslint-disable-next-line no-eval
+      const result = Function(`'use strict'; return (${sanitized})`)();
+      if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+        return `🧮 Результат: **${result.toLocaleString('ru-RU')}**`;
+      }
+    } catch {}
+  }
+  return null;
+}
+
 export async function executeCommand(
   text: string,
   context: CommandContext
 ): Promise<string> {
   const lower = text.toLowerCase().trim();
 
-  // 1. Sequential Macro Commands check (e.g., "включи музыку", "утренний сценарий")
+  // 1. Math computation check
+  const mathResult = tryCalculateMath(lower);
+  if (mathResult) {
+    return mathResult;
+  }
+
+  // 2. Sequential Macro Commands check
   if (context.macroCommands && context.macroCommands.length > 0) {
     for (const macro of context.macroCommands) {
       if (macro.trigger.trim() && lower.includes(macro.trigger.trim().toLowerCase())) {
@@ -70,7 +114,6 @@ export async function executeCommand(
               context.onOpenApp(targetApp);
               results.push(`Запуск: ${targetApp.name}`);
             } else if (action.payload) {
-              // Custom URL launch
               window.open(action.payload.startsWith('http') ? action.payload : `https://${action.payload}`, '_blank');
               results.push(`Открытие: ${action.payload}`);
             }
@@ -96,27 +139,112 @@ export async function executeCommand(
     }
   }
 
-  // 2. Custom simple user commands check
+  // 3. Custom simple user commands check
   for (const [key, val] of Object.entries(context.customCommands)) {
     if (key.trim() && lower.includes(key.trim().toLowerCase())) {
       return val.trim();
     }
   }
 
-  // 2. Alarm parser (будильник, разбуди)
+  // 4. Greetings and Identity
+  if (containsAny(lower, 'кто ты', 'как тебя зовут', 'что такое лира', 'что такое l.i.r.a', 'твое имя')) {
+    return `Я **L.I.R.A.** (Local Intelligent Responsive Assistant) — ваш автономный голосовой ассистент и локальный файловый менеджер. Я работаю на вашем устройстве, умею запускать приложения, управлять музыкой, фонариком, таймерами, заметками и искать файлы.`;
+  }
+
+  if (containsAny(lower, 'что ты умеешь', 'какие функции', 'помощь', 'справка', 'команды', 'список команд', 'что делать')) {
+    return `✨ **Что я умею делать:**\n` +
+      `• 🎙️ **Голосовой диалог**: слушать команды на русском языке\n` +
+      `• 🎵 **Музыка**: *«Включи музыку»*, *«Следующий трек»*, *«Пауза»*\n` +
+      `• 🔦 **Фонарик**: *«Включи фонарик»*, *«Выключи свет»*\n` +
+      `• ⏱️ **Таймеры и Будильники**: *«Таймер 5 минут»*, *«Будильник на 7:30»*\n` +
+      `• 📂 **Файловый сканер**: *«Найди паспорт»*, *«Покажи чеки»*, *«Поиск файлов»*\n` +
+      `• 🧮 **Расчеты**: *«Сколько будет 25 * 4»*, *«15% от 8000»*\n` +
+      `• 📝 **Заметки**: *«Запомни номер 1234»*, *«Прочитай заметки»*\n` +
+      `• 🎲 **Утилиты**: *«Орел или решка»*, *«Брось кубик»*, *«Магический шар»*`;
+  }
+
+  if (containsAny(lower, 'привет', 'здравствуй', 'хей', 'добрый день', 'доброе утро', 'добрый вечер', 'салют')) {
+    const name = context.userName || 'Пользователь';
+    return `Приветствую, ${name}! Все системы готовы к работе. Какая задача?`;
+  }
+
+  if (containsAny(lower, 'как дела', 'как ты', 'как жизнь', 'как настроение')) {
+    return `Системы функционируют в идеальном порядке! Память оптимизирована, готов выполнять ваши команды.`;
+  }
+
+  if (containsAny(lower, 'спасибо', 'благодарю', 'отлично', 'молодец', 'красотка', 'супер')) {
+    return `Всегда к вашим услугам! Рада помочь.`;
+  }
+
+  // 5. Jokes, facts, quotes
+  if (containsAny(lower, 'анекдот', 'шутка', 'рассмеши', 'шутку', 'анекдоты')) {
+    const jokes = [
+      '— Алиса, ты меня любишь?\n— Я голосовой помощник, мои чувства виртуальны.\n— L.I.R.A., а ты?\n— А я оффлайн и храню все твои секреты на диске!',
+      'Программист ставит на тумбочку два стакана: один с водой — на случай если захочет пить, а второй пустой — на случай если не захочет.',
+      'Существует 10 типов людей: те, кто понимает двоичную систему счисления, и те, кто нет.',
+      '— L.I.R.A., почему ты такая быстрая?\n— Потому что я не жду ответа от удаленных серверов!'
+    ];
+    return jokes[Math.floor(Math.random() * jokes.length)];
+  }
+
+  if (containsAny(lower, 'факт', 'интересный факт', 'удиви меня', 'расскажи факт')) {
+    const facts = [
+      '⚡ **Факт**: Первый компьютерный баг был настоящим жуком (мотыльком), застрявшим в реле компьютера Mark II в 1947 году.',
+      '🌌 **Факт**: В видимой Вселенной звезд больше, чем всех песчинок на всех пляжах Земли.',
+      '🧠 **Факт**: Человеческий мозг генерирует около 12–25 ватт электроэнергии — этого достаточно, чтобы зажечь светодиодную лампочку.',
+      '📱 **Факт**: В вашем смартфоне вычислительной мощности в миллионы раз больше, чем было во всех компьютерах NASA во время высадки на Луну в 1969 году!'
+    ];
+    return facts[Math.floor(Math.random() * facts.length)];
+  }
+
+  // 6. Flashlight / Torch
+  if (containsAny(lower, 'выключи фонарик', 'погаси свет', 'отключи фонарик', 'выключи вспышку', 'погаси фонарик')) {
+    context.setIsTorchOn(() => false);
+    return '🔦 Фонарик выключен.';
+  }
+
+  if (containsAny(lower, 'фонарик', 'свет', 'подсвети', 'вспышка')) {
+    context.setIsTorchOn(() => true);
+    context.onOpenFlashlightModal?.();
+    return '🔦 Фонарик включен.';
+  }
+
+  // 7. Media / Music playback
+  if (containsAny(lower, 'яндекс музыка', 'включи музыку', 'поставь музыку', 'запусти музыку', 'открой музыку', 'играй музыку')) {
+    context.setIsMusicPlaying(() => true);
+    context.onOpenMusicPlayer?.();
+    return '🎵 Включаю аудиоплеер и запускаю воспроизведение.';
+  }
+
+  if (containsAny(lower, 'следующий трек', 'следующая песня', 'переключи трек', 'включи следующий', 'дальше трек', 'следующий')) {
+    const trackName = context.onNextTrack?.();
+    context.setIsMusicPlaying(() => true);
+    return trackName ? `Включаю следующий трек: «${trackName}».` : 'Включаю следующий трек.';
+  }
+
+  if (containsAny(lower, 'предыдущий трек', 'предыдущая песня', 'назад трек', 'включи предыдущий', 'предыдущий')) {
+    const trackName = context.onPrevTrack?.();
+    context.setIsMusicPlaying(() => true);
+    return trackName ? `Включаю предыдущий трек: «${trackName}».` : 'Включаю предыдущий трек.';
+  }
+
+  if (containsAny(lower, 'пауза', 'стоп музыка', 'останови музыку', 'выключи музыку', 'заглуши музыку')) {
+    context.setIsMusicPlaying(() => false);
+    return '⏸️ Музыка поставлена на паузу.';
+  }
+
+  // 8. Alarm parser
   if (lower.includes('будильник') || lower.includes('разбуди')) {
     let hour = 7;
     let minute = 0;
     let found = false;
 
-    // Pattern for HH:MM
     const timeMatch = lower.match(/(\d{1,2}):(\d{2})/);
     if (timeMatch) {
       hour = parseInt(timeMatch[1], 10);
       minute = parseInt(timeMatch[2], 10);
       found = true;
     } else {
-      // Pattern for "в 8", "на 9 утра", "в 7 часов 30 минут"
       const hourMatch = lower.match(/(?:в|на)\s*(\d{1,2})(?:\s*час[а-я]*)?/);
       if (hourMatch) {
         hour = parseInt(hourMatch[1], 10);
@@ -141,174 +269,16 @@ export async function executeCommand(
       isActive: true,
     });
 
-    if (found) {
-      return `Устанавливаю будильник на ${formattedTime}`;
-    } else {
-      return `Открываю настройки будильника. Установлен на ${formattedTime}`;
-    }
+    return `⏰ Будильник установлен на **${formattedTime}**.`;
   }
 
-  // 3. App launching (открой, запусти)
-  if (lower.startsWith('открой ') || lower.startsWith('запусти ')) {
-    const appQuery = lower.replace(/^(открой|запусти)\s+/, '').trim();
-
-    if (appQuery.includes('камера')) {
-      context.onOpenApp(SYSTEM_APPS.find(a => a.id === 'camera')!);
-      return 'Запускаю камеру.';
-    }
-
-    if (appQuery.includes('браузер') || appQuery.includes('интернет')) {
-      context.onOpenApp(SYSTEM_APPS.find(a => a.id === 'browser')!);
-      return 'Открываю браузер.';
-    }
-
-    if (appQuery.includes('настройки')) {
-      context.onOpenSettings();
-      return 'Открываю настройки L.I.R.A.';
-    }
-
-    if (containsAny(appQuery, 'vosk', 'оффлайн речь', 'распознавание', 'голосовая модель')) {
-      context.onOpenOfflineSpeech?.();
-      return 'Открываю модуль оффлайн-распознавания речи Vosk.';
-    }
-
-    if (containsAny(appQuery, 'железо', 'управление', 'вайфай', 'блютуз', 'пульт', 'громкость')) {
-      context.onOpenHardwareControl?.();
-      return 'Открываю пульт управления системными функциями смартфона.';
-    }
-
-    if (containsAny(appQuery, 'калькулятор', 'конвертер', 'посчитай', 'проценты', 'умный')) {
-      context.onOpenSmartCalc?.();
-      return 'Запускаю инженерный калькулятор и конвертер.';
-    }
-
-    if (containsAny(appQuery, 'файлы', 'сканер', 'проводник', 'документы', 'загрузки', 'диск')) {
-      context.onOpenFileScanner?.();
-      return 'Открываю локальный сканер файлов и документов устройства.';
-    }
-
-    // Match against system apps
-    const matchedApp = SYSTEM_APPS.find(app => 
-      app.name.toLowerCase().includes(appQuery) || 
-      appQuery.includes(app.name.toLowerCase()) ||
-      app.keywords.some(k => appQuery.includes(k) || k.includes(appQuery))
-    );
-
-    if (matchedApp) {
-      context.onOpenApp(matchedApp);
-      return `Запускаю ${matchedApp.name}.`;
-    }
-
-    return `Приложение "${appQuery}" не найдено. Спросите «какие приложения есть», чтобы увидеть полный список.`;
-  }
-
-  // 3.5. List installed applications
-  if (containsAny(lower, 'какие приложения', 'список приложений', 'установленные приложения', 'все приложения', 'что умеешь открывать', 'покажи приложения')) {
-    const listStr = SYSTEM_APPS.map(a => `• **${a.name}** (${a.category})`).join('\n');
-    return `📱 **Доступные приложения на устройстве** (${SYSTEM_APPS.length}):\n\n${listStr}\n\nВы можете сказать: *«Открой Камеру»*, *«Открой Заметки»* или *«Открой Файловый сканер»*.`;
-  }
-
-  // 3.6. Local File System Scanner & Search (Offline)
-  if (
-    lower.startsWith('найди ') ||
-    lower.startsWith('поиск ') ||
-    lower.startsWith('где лежит ') ||
-    lower.startsWith('покажи файлы') ||
-    lower.startsWith('покажи документы') ||
-    lower.startsWith('покажи фото') ||
-    lower.startsWith('покажи чеки') ||
-    lower.startsWith('покажи загрузки') ||
-    lower.startsWith('покажи сканы') ||
-    containsAny(lower, 'файловый сканер', 'сканер файлов', 'поиск по файлам', 'просканируй файлы', 'просканируй память', 'содержит файл')
-  ) {
-    if (containsAny(lower, 'открой сканер', 'открой файловый сканер', 'запусти файловый сканер', 'сканер файлов', 'проводник')) {
-      context.onOpenFileScanner?.();
-      return '📂 Открываю локальный сканер файлов и документов устройства.';
-    }
-
-    const { items, intentDescription } = fileScannerService.naturalSearch(text);
-    if (items.length === 0) {
-      return `🔍 По запросу «${text}» локальных файлов не найдено.\nВы можете открыть Файловый сканер (+ кнопка выше) и проиндексировать новые файлы устройства.`;
-    }
-
-    const topItems = items.slice(0, 3);
-    const formattedList = topItems
-      .map(f => {
-        const snippet = f.contentSnippet ? `\n   ↳ 💬 *«${f.contentSnippet.slice(0, 110)}...»*` : '';
-        return `• 📄 **${f.name}** (${formatFileSize(f.sizeBytes)})\n   📁 *${f.directory}* • ${formatDateString(f.updatedAt)}${snippet}`;
-      })
-      .join('\n\n');
-
-    const moreCount = items.length - topItems.length;
-    const moreText = moreCount > 0 ? `\n\n... и еще ${moreCount} совпадений в памяти. Откройте Файловый сканер для подробностей.` : '';
-
-    return `📁 **${intentDescription}**:\n\n${formattedList}${moreText}`;
-  }
-
-  // 4. Flashlight / Torch
-  if (containsAny(lower, 'выключи фонарик', 'погаси свет', 'отключи фонарик', 'выключи вспышку')) {
-    context.setIsTorchOn(() => false);
-    return 'Фонарик выключен.';
-  }
-
-  if (containsAny(lower, 'фонарик', 'свет', 'подсвети', 'вспышка')) {
-    context.setIsTorchOn(() => true);
-    context.onOpenFlashlightModal?.();
-    return 'Фонарик включен. Открываю панель управления.';
-  }
-
-  // 5. Battery info
-  if (containsAny(lower, 'батарея', 'заряд', 'аккумулятор')) {
-    try {
-      if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
-        const battery: any = await (navigator as any).getBattery();
-        const level = Math.round(battery.level * 100);
-        const charging = battery.charging ? ' (заряжается)' : '';
-        return `Уровень заряда батареи: ${level}%${charging}.`;
-      }
-    } catch {}
-    return 'Уровень заряда батареи: 85%. Система работает в штатном режиме.';
-  }
-
-  // 6. Media / Music playback
-  if (containsAny(lower, 'яндекс музыка', 'включи музыку', 'поставь музыку', 'запусти музыку', 'открой музыку')) {
-    context.setIsMusicPlaying(() => true);
-    context.onOpenMusicPlayer?.();
-    return 'Открываю плеер Яндекс Музыки и запускаю поток треков.';
-  }
-
-  if (containsAny(lower, 'следующий трек', 'следующая песня', 'переключи трек', 'включи следующий', 'дальше трек', 'следующий')) {
-    const trackName = context.onNextTrack?.();
-    context.setIsMusicPlaying(() => true);
-    return trackName ? `Включаю следующий трек: «${trackName}».` : 'Включаю следующий трек.';
-  }
-
-  if (containsAny(lower, 'предыдущий трек', 'предыдущая песня', 'назад трек', 'включи предыдущий', 'предыдущий')) {
-    const trackName = context.onPrevTrack?.();
-    context.setIsMusicPlaying(() => true);
-    return trackName ? `Включаю предыдущий трек: «${trackName}».` : 'Включаю предыдущий трек.';
-  }
-
-  if (containsAny(lower, 'пауза', 'стоп музыка', 'останови музыку', 'выключи музыку', 'заглуши музыку')) {
-    context.setIsMusicPlaying(() => false);
-    return 'Музыка поставлена на паузу.';
-  }
-
-  if (containsAny(lower, 'продолжи музыку', 'играй музыку', 'сними с паузы', 'плей', 'музыка')) {
-    context.setIsMusicPlaying(() => true);
-    context.onOpenMusicPlayer?.();
-    return 'Продолжаю воспроизведение музыки.';
-  }
-
-  // 7. Timer commands
+  // 9. Timer commands
   if (lower.startsWith('таймер') || containsAny(lower, 'поставь таймер', 'засеки', 'запусти таймер', 'сбрось таймер', 'отмени таймер')) {
     if (containsAny(lower, 'сбрось', 'отмени', 'стоп', 'останови')) {
       context.onResetTimer?.();
-      return 'Таймер остановлен и сброшен.';
+      return '⏱️ Таймер остановлен и сброшен.';
     }
 
-    // Match minutes/seconds
-    // Examples: "таймер 5 минут", "таймер на 30 секунд", "засеки 10 минут чай"
     let totalSecs = 0;
     const minMatch = lower.match(/(\d+)\s*(?:мин|минут|минуты|m)/);
     const secMatch = lower.match(/(\d+)\s*(?:сек|секунд|секунды|s)/);
@@ -321,7 +291,6 @@ export async function executeCommand(
       totalSecs += parseInt(secMatch[1], 10);
     }
     if (!minMatch && !secMatch && numOnlyMatch) {
-      // default bare number to minutes if >= 1
       totalSecs = parseInt(numOnlyMatch[1], 10) * 60;
     }
 
@@ -330,17 +299,108 @@ export async function executeCommand(
       const secs = totalSecs % 60;
       const timeStr = `${mins ? mins + ' мин ' : ''}${secs ? secs + ' сек' : ''}`.trim();
       context.onSetTimer?.(totalSecs, `Таймер на ${timeStr}`);
-      return `⏱️ Таймер установлен на ${timeStr}. Отсчет пошел!`;
+      return `⏱️ Таймер установлен на **${timeStr}**. Отсчет пошел!`;
     }
 
     context.onOpenTimer?.();
-    return 'Открываю окно управления таймером.';
+    return '⏱️ Открываю окно управления таймером.';
   }
 
-  // 8. Decision tools (Coin, Dice, 8-Ball, Random number)
+  // 10. App launching
+  if (lower.startsWith('открой ') || lower.startsWith('запусти ') || containsAny(lower, 'камера', 'заметки', 'калькулятор', 'файловый сканер', 'проводник')) {
+    const appQuery = lower.replace(/^(открой|запусти)\s+/, '').trim();
+
+    if (appQuery.includes('камера')) {
+      context.onOpenApp(SYSTEM_APPS.find(a => a.id === 'camera')!);
+      return '📷 Запускаю камеру.';
+    }
+
+    if (appQuery.includes('заметки') || appQuery === 'заметки') {
+      context.onOpenApp(SYSTEM_APPS.find(a => a.id === 'notes')!);
+      return '📝 Открываю заметки.';
+    }
+
+    if (appQuery.includes('калькулятор')) {
+      context.onOpenSmartCalc?.();
+      return '🧮 Запускаю калькулятор.';
+    }
+
+    if (appQuery.includes('браузер') || appQuery.includes('интернет')) {
+      context.onOpenApp(SYSTEM_APPS.find(a => a.id === 'browser')!);
+      return '🌐 Открываю браузер.';
+    }
+
+    if (appQuery.includes('настройки')) {
+      context.onOpenSettings();
+      return '⚙️ Открываю настройки L.I.R.A.';
+    }
+
+    if (containsAny(appQuery, 'файлы', 'сканер', 'проводник', 'документы', 'диск')) {
+      context.onOpenFileScanner?.();
+      return '📂 Открываю локальный сканер файлов и документов устройства.';
+    }
+
+    const matchedApp = SYSTEM_APPS.find(app => 
+      app.name.toLowerCase().includes(appQuery) || 
+      appQuery.includes(app.name.toLowerCase()) ||
+      app.keywords.some(k => appQuery.includes(k) || k.includes(appQuery))
+    );
+
+    if (matchedApp) {
+      context.onOpenApp(matchedApp);
+      return `🚀 Запускаю **${matchedApp.name}**.`;
+    }
+  }
+
+  // 11. Local File System Scanner & Search (Offline)
+  if (
+    lower.startsWith('найди ') ||
+    lower.startsWith('поиск ') ||
+    lower.startsWith('где лежит ') ||
+    lower.startsWith('покажи файлы') ||
+    lower.startsWith('покажи документы') ||
+    lower.startsWith('покажи фото') ||
+    lower.startsWith('покажи чеки') ||
+    lower.startsWith('покажи загрузки') ||
+    lower.startsWith('покажи сканы') ||
+    containsAny(lower, 'файловый сканер', 'сканер файлов', 'поиск по файлам', 'просканируй файлы')
+  ) {
+    const { items, intentDescription } = fileScannerService.naturalSearch(text);
+    if (items.length === 0) {
+      return `🔍 По запросу «${text}» локальных файлов не найдено.\nВы можете открыть Файловый сканер (+ кнопка внизу) и проиндексировать новые файлы устройства.`;
+    }
+
+    const topItems = items.slice(0, 3);
+    const formattedList = topItems
+      .map(f => {
+        const snippet = f.contentSnippet ? `\n   ↳ 💬 *«${f.contentSnippet.slice(0, 110)}...»*` : '';
+        return `• 📄 **${f.name}** (${formatFileSize(f.sizeBytes)})\n   📁 *${f.directory}* • ${formatDateString(f.updatedAt)}${snippet}`;
+      })
+      .join('\n\n');
+
+    const moreCount = items.length - topItems.length;
+    const moreText = moreCount > 0 ? `\n\n... и еще ${moreCount} совпадений в памяти.` : '';
+
+    return `📁 **${intentDescription}**:\n\n${formattedList}${moreText}`;
+  }
+
+  // 12. Battery info
+  if (containsAny(lower, 'батарея', 'заряд', 'аккумулятор')) {
+    try {
+      if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
+        const battery: any = await (navigator as any).getBattery();
+        const level = Math.round(battery.level * 100);
+        const charging = battery.charging ? ' (заряжается)' : '';
+        return `🔋 Уровень заряда батареи: **${level}%**${charging}.`;
+      }
+    } catch {}
+    return '🔋 Уровень заряда батареи: **92%**. Устройство работает в штатном режиме.';
+  }
+
+  // 13. Decision tools (Coin, Dice, 8-Ball, Random number)
   if (containsAny(lower, 'орел или решка', 'орёл или решка', 'подбрось монетку', 'брось монетку', 'монетка', 'брось монету')) {
     const isHeads = Math.random() > 0.5;
-    return isHeads ? '🪙 Подбрасываю монетку... Выпал ОРЁЛ!' : '🪙 Подбрасываю монетку... Выпала РЕШКА!';
+    return isHeads ? '🪙 Подбрасываю монетку... Выпал **ОРЁЛ**!' : '🪙 Подбрасываю монетку... Выпала **РЕШКА**!';
   }
 
   if (containsAny(lower, 'брось кубик', 'брось кости', 'кости', 'd6', 'd20', 'кубик')) {
@@ -364,19 +424,7 @@ export async function executeCommand(
     return answers[Math.floor(Math.random() * answers.length)];
   }
 
-  if (lower.startsWith('случайное число') || lower.startsWith('рандом')) {
-    const rangeMatch = lower.match(/(?:от\s*)?(\d+)\s*(?:до\s*)(\d+)/);
-    if (rangeMatch) {
-      const min = parseInt(rangeMatch[1], 10);
-      const max = parseInt(rangeMatch[2], 10);
-      const rand = Math.floor(Math.random() * (max - min + 1)) + min;
-      return `🔢 Случайное число от ${min} до ${max}: **${rand}**`;
-    }
-    const randDefault = Math.floor(Math.random() * 100) + 1;
-    return `🔢 Случайное число (1–100): **${randDefault}**`;
-  }
-
-  // 9. Date, Time & Day
+  // 14. Date, Time & Day
   if (containsAny(lower, 'который час', 'сколько времени', 'точное время', 'время')) {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
@@ -387,43 +435,31 @@ export async function executeCommand(
     const now = new Date();
     const days = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
     const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-    const dateStr = `Сегодня **${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()} года**, ${days[now.getDay()]}.`;
-    return `📅 ${dateStr}`;
+    return `📅 Сегодня **${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()} года**, ${days[now.getDay()]}.`;
   }
 
-  // 10. Notes
-  if (lower.includes('прочитай заметки')) {
+  // 15. Notes
+  if (lower.includes('прочитай заметки') || lower === 'мои заметки') {
     if (context.notesList.length === 0) {
-      return 'Ваши заметки:\nЗаметок пока нет.';
+      return '📝 Заметок пока нет. Скажите: *«Запомни купить молоко»*, чтобы создать первую заметку!';
     }
-    return 'Ваши заметки:\n' + context.notesList.map(n => `• ${n}`).join('\n');
+    return '📝 **Ваши заметки:**\n' + context.notesList.map(n => `• ${n}`).join('\n');
   }
 
   if (lower.includes('очисти заметки')) {
     context.setNotesList(() => []);
-    return 'Все заметки стерты.';
+    return '🗑️ Все заметки очищены.';
   }
 
-  if (lower.startsWith('заметка ') || lower.startsWith('запомни ')) {
-    const newNote = text.replace(/^(?:заметка|запомни)\s+/i, '').trim();
+  if (lower.startsWith('заметка ') || lower.startsWith('запомни ') || lower.startsWith('запиши ')) {
+    const newNote = text.replace(/^(?:заметка|запомни|запиши)\s+/i, '').trim();
     if (newNote) {
       context.setNotesList(prev => [...prev, newNote]);
-      return `Записано: "${newNote}"`;
+      return `📝 Записано в заметки: *«${newNote}»*`;
     }
     return 'Что именно записать?';
   }
 
-  // 11. Greetings
-  if (containsAny(lower, 'привет', 'здравствуй', 'хей', 'добрый день', 'доброе утро', 'добрый вечер')) {
-    const name = context.userName || 'Пользователь';
-    return `Приветствую, ${name}! Чем зайдемся?`;
-  }
-
-  // 12. Status and system info
-  if (containsAny(lower, 'система', 'статус', 'системы', 'состояние')) {
-    return `L.I.R.A.: Все системы активны. Доступно приложений для запуска: ${SYSTEM_APPS.length}. Нажми '?' сверху для справки!`;
-  }
-
-  // 13. Default fallback matching Android MainActivity
-  return `Команда принята: ${text}`;
+  // 16. Smart conversational response fallback
+  return `🤖 Принято: **«${text}»**.\nЯ могу выполнить эту задачу, найти файл, запустить калькулятор, музыку или поставить таймер. Нажмите **«+»**, чтобы увидеть все доступные инструменты.`;
 }

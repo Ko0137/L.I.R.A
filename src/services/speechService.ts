@@ -1,4 +1,6 @@
-// Speech Recognition and Text-to-Speech (TTS) Service
+// Speech Recognition and Text-to-Speech (TTS) Service with Native Android (Capacitor) & Web Speech API support
+import { Capacitor } from '@capacitor/core';
+import { SpeechRecognition as NativeSpeech } from '@capacitor-community/speech-recognition';
 
 export interface SpeechRecognitionHandlers {
   onStart?: () => void;
@@ -19,29 +21,47 @@ class SpeechService {
   private isListening: boolean = false;
   private currentVoice: SpeechSynthesisVoice | null = null;
   private voicesLoaded: boolean = false;
+  private nativeAvailable: boolean | null = null;
 
   constructor() {
     this.initTTS();
+    this.checkNativeAvailability();
+  }
+
+  private async checkNativeAvailability() {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { available } = await NativeSpeech.available();
+        this.nativeAvailable = available;
+      } catch {
+        this.nativeAvailable = false;
+      }
+    } else {
+      this.nativeAvailable = false;
+    }
   }
 
   private initTTS() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       const loadVoices = () => {
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-          this.voicesLoaded = true;
-          // Prefer Russian female voice or Russian voice
-          const ruVoices = voices.filter(v => v.lang.startsWith('ru'));
-          const femaleRu = ruVoices.find(v => 
-            v.name.toLowerCase().includes('female') || 
-            v.name.toLowerCase().includes('жен') ||
-            v.name.toLowerCase().includes('anna') ||
-            v.name.toLowerCase().includes('tatyana') ||
-            v.name.toLowerCase().includes('milena') ||
-            v.name.toLowerCase().includes('victoria')
-          );
-          this.currentVoice = femaleRu || ruVoices[0] || voices[0];
-        }
+        try {
+          const voices = window.speechSynthesis.getVoices();
+          if (voices.length > 0) {
+            this.voicesLoaded = true;
+            // Prefer Russian female voice or Russian voice
+            const ruVoices = voices.filter(v => v.lang.startsWith('ru'));
+            const femaleRu = ruVoices.find(v => 
+              v.name.toLowerCase().includes('female') || 
+              v.name.toLowerCase().includes('жен') ||
+              v.name.toLowerCase().includes('anna') ||
+              v.name.toLowerCase().includes('tatyana') ||
+              v.name.toLowerCase().includes('milena') ||
+              v.name.toLowerCase().includes('victoria') ||
+              v.name.toLowerCase().includes('google')
+            );
+            this.currentVoice = femaleRu || ruVoices[0] || voices[0];
+          }
+        } catch {}
       };
 
       loadVoices();
@@ -52,18 +72,65 @@ class SpeechService {
   }
 
   isSpeechRecognitionSupported(): boolean {
+    if (Capacitor.isNativePlatform()) {
+      return true;
+    }
     return typeof window !== 'undefined' && (!!window.SpeechRecognition || !!window.webkitSpeechRecognition);
   }
 
-  startListening(handlers: SpeechRecognitionHandlers): boolean {
+  async startListening(handlers: SpeechRecognitionHandlers): Promise<boolean> {
+    this.stopListening();
+
+    // 1. If running on native Android (Capacitor APK)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        // Request microphone permission on Android
+        const permStatus = await NativeSpeech.requestPermissions();
+        if (permStatus.speechRecognition !== 'granted') {
+          handlers.onError?.('Необходимо разрешение на использование микрофона в настройках Android.');
+          return false;
+        }
+
+        this.isListening = true;
+        handlers.onStart?.();
+
+        // Listen for partial and final results
+        const listener = await NativeSpeech.addListener('partialResults', (data: { matches: string[] }) => {
+          if (data.matches && data.matches.length > 0) {
+            handlers.onResult?.(data.matches[0]);
+          }
+        });
+
+        const result = await NativeSpeech.start({
+          language: 'ru-RU',
+          maxResults: 2,
+          prompt: 'Слушаю вас...',
+          partialResults: false,
+          popup: false,
+        });
+
+        this.isListening = false;
+        handlers.onEnd?.();
+
+        if (result.matches && result.matches.length > 0) {
+          handlers.onResult?.(result.matches[0]);
+        }
+        return true;
+      } catch (err: any) {
+        this.isListening = false;
+        handlers.onEnd?.();
+        // If native failed, try web fallback below
+        console.warn('Native speech recognition error, falling back to Web API', err);
+      }
+    }
+
+    // 2. Web Speech API (Browser or WebView fallback)
     if (!this.isSpeechRecognitionSupported()) {
-      handlers.onError?.('Распознавание речи не поддерживается в данном браузере.');
+      handlers.onError?.('Распознавание речи не поддерживается или заблокировано. Нажмите кнопку «+» и используйте текстовый ввод или Vosk.');
       return false;
     }
 
     try {
-      this.stopListening();
-
       const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
       this.recognition = new SpeechRecognitionClass();
       this.recognition.lang = 'ru-RU';
@@ -83,7 +150,12 @@ class SpeechService {
 
       this.recognition.onerror = (event: any) => {
         this.isListening = false;
-        handlers.onError?.(event.error || 'Ошибка микрофона');
+        const errMsg = event.error === 'not-allowed'
+          ? 'Доступ к микрофону заблокирован. Разрешите микрофон в настройках приложения.'
+          : event.error === 'no-speech'
+          ? 'Голос не обнаружен. Попробуйте еще раз.'
+          : (event.error || 'Ошибка микрофона');
+        handlers.onError?.(errMsg);
         handlers.onEnd?.();
       };
 
@@ -97,12 +169,20 @@ class SpeechService {
       this.recognition.start();
       return true;
     } catch (e: any) {
+      this.isListening = false;
       handlers.onError?.(e.message || 'Не удалось запустить микрофон');
       return false;
     }
   }
 
-  stopListening() {
+  async stopListening() {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await NativeSpeech.stop();
+        await NativeSpeech.removeAllListeners();
+      } catch {}
+    }
+
     if (this.recognition) {
       try {
         this.recognition.abort();
@@ -120,11 +200,12 @@ class SpeechService {
       // Cancel previous utterance
       window.speechSynthesis.cancel();
 
-      // Clean text for speech
+      // Clean text for speech synthesis
       const cleanText = text
         .replace(/•/g, '')
-        .replace(/[#*_~`]/g, '')
+        .replace(/[*_~`#]/g, '')
         .replace(/https?:\/\/\S+/g, 'ссылка')
+        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '')
         .trim();
 
       if (!cleanText) return;
@@ -144,9 +225,9 @@ class SpeechService {
         utterance.voice = this.currentVoice;
       }
 
-      // Voice pitch and rate matching LIRA
+      // Natural speech parameters
       if (options.femaleVoice !== false) {
-        utterance.pitch = 1.15;
+        utterance.pitch = 1.1;
         utterance.rate = 1.05;
       } else {
         utterance.pitch = 0.95;
@@ -159,7 +240,9 @@ class SpeechService {
 
   stopSpeaking() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
     }
   }
 }
