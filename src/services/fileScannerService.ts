@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 import { IndexedFileItem, FileCategory, FileFilterOptions } from '../types';
 
 const STORAGE_KEY = 'lira_indexed_files_v1';
@@ -292,7 +294,55 @@ class FileScannerService {
   /**
    * Storage usage breakdown
    */
-  getStorageStats() {
+  public async scanDeviceStorageNative(): Promise<number> {
+    if (!Capacitor.isNativePlatform()) return 0;
+    let addedCount = 0;
+    try {
+      const directories = [
+        { dir: Directory.Documents, cat: 'document' as FileCategory, path: 'Документы' },
+        { dir: Directory.Data, cat: 'other' as FileCategory, path: 'Данные' },
+        { dir: Directory.External, cat: 'download' as FileCategory, path: 'Внешняя память' },
+      ];
+
+      for (const d of directories) {
+        try {
+          const res = await Filesystem.readdir({ path: '', directory: d.dir });
+          for (const item of res.files) {
+            const fileName = typeof item === 'string' ? item : item.name;
+            if (!fileName) continue;
+            
+            const ext = fileName.split('.').pop()?.toLowerCase() || '';
+            let category: FileCategory = d.cat;
+            if (['pdf', 'doc', 'docx', 'txt', 'xlsx'].includes(ext)) category = 'document';
+            if (['jpg', 'png', 'gif', 'webp', 'jpeg'].includes(ext)) category = 'image';
+            if (['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext)) category = 'audio';
+            if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) category = 'archive';
+
+            const scannedItem: IndexedFileItem = {
+              id: 'native-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+              name: fileName,
+              extension: ext,
+              category,
+              directory: `/${d.path}/`,
+              sizeBytes: typeof item === 'object' && (item as any).size ? (item as any).size : 1024 * 50,
+              updatedAt: new Date().toISOString(),
+              contentSnippet: `Файл ${fileName} из директории ${d.path}`,
+              tags: [ext, category, 'локальный скан'],
+              isStarred: false,
+              isUserScanned: true,
+            };
+            this.files.push(scannedItem);
+            addedCount++;
+          }
+        } catch {}
+      }
+    } catch (err) {
+      console.error('Native scan error:', err);
+    }
+    return addedCount;
+  }
+
+  public getStorageStats() {
     let totalBytes = 0;
     const categoryStats: Record<string, { count: number; bytes: number }> = {
       document: { count: 0, bytes: 0 },

@@ -156,6 +156,44 @@ export const App: React.FC = () => {
     applyAppIcon(iconId);
   }, [settings.appIcon]);
 
+  // Flashlight Hardware Control (Camera LED Torch)
+  useEffect(() => {
+    let activeTrack: MediaStreamTrack | null = null;
+    let activeStream: MediaStream | null = null;
+
+    if (isTorchOn) {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ video: { facingMode: 'environment' } })
+          .then(stream => {
+            activeStream = stream;
+            const track = stream.getVideoTracks()[0];
+            if (track) {
+              activeTrack = track;
+              track.applyConstraints({
+                advanced: [{ torch: true } as any]
+              }).catch(() => {});
+            }
+          })
+          .catch(() => {});
+      }
+    }
+
+    return () => {
+      if (activeTrack) {
+        try {
+          activeTrack.applyConstraints({ advanced: [{ torch: false } as any] }).catch(() => {});
+          activeTrack.stop();
+        } catch {}
+      }
+      if (activeStream) {
+        try {
+          activeStream.getTracks().forEach(t => t.stop());
+        } catch {}
+      }
+    };
+  }, [isTorchOn]);
+
   // Track navigation handlers
   const handleNextTrack = useCallback(() => {
     let nextTitle = '';

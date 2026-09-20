@@ -117,6 +117,23 @@ export const FileScannerModal: React.FC<FileScannerModalProps> = ({
     }
   };
 
+  const handleNativeScan = async () => {
+    triggerVibration('selection');
+    setIsScanningActive(true);
+    setScanMessage('Сканирование памяти Android устройства...');
+    try {
+      const count = await fileScannerService.scanDeviceStorageNative();
+      setFilesList(fileScannerService.getAllFiles());
+      soundManager.playCommandSuccess();
+      setScanMessage(`Найдено и проиндексировано +${count} файлов устройства!`);
+      setTimeout(() => setScanMessage(null), 4000);
+    } catch {
+      setScanMessage('Не удалось прочитать хранилище файла');
+    } finally {
+      setIsScanningActive(false);
+    }
+  };
+
   const handleToggleStar = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     triggerVibration('tap');
@@ -274,12 +291,22 @@ export const FileScannerModal: React.FC<FileScannerModalProps> = ({
 
               <button
                 type="button"
+                onClick={handleNativeScan}
+                disabled={isScanningActive}
+                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <FolderSearch className="w-3 h-3" />
+                <span>📱 Просканировать Android</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isScanningActive}
                 className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
               >
                 <Upload className="w-3 h-3" />
-                <span>+ Добавить файлы устройства</span>
+                <span>+ Файлы</span>
               </button>
 
               <button

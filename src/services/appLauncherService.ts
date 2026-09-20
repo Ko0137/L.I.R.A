@@ -1,4 +1,6 @@
 // Installed Apps Scanner & Deep Link Launcher for Android / Pixel 8
+import { Capacitor } from '@capacitor/core';
+import { AppLauncher } from '@capacitor/app-launcher';
 import { LaunchableApp } from '../types';
 
 export interface InstalledPhoneApp {
@@ -217,13 +219,29 @@ class AppLauncherService {
     return null;
   }
 
-  public launchApp(app: InstalledPhoneApp): boolean {
+  public async launchApp(app: InstalledPhoneApp): Promise<boolean> {
     try {
-      // If it's a mobile native URI scheme
+      if (Capacitor.isNativePlatform()) {
+        if (app.uriScheme) {
+          const canOpen = await AppLauncher.canOpenUrl({ url: app.uriScheme });
+          if (canOpen.value) {
+            await AppLauncher.openUrl({ url: app.uriScheme });
+            return true;
+          }
+        }
+        if (app.packageName) {
+          const pkgScheme = `intent://#Intent;package=${app.packageName};end`;
+          const canOpenPkg = await AppLauncher.canOpenUrl({ url: pkgScheme });
+          if (canOpenPkg.value) {
+            await AppLauncher.openUrl({ url: pkgScheme });
+            return true;
+          }
+        }
+      }
+
+      // Web/Fallback
       if (app.uriScheme && !app.uriScheme.startsWith('http')) {
-        // Try opening URI scheme
         window.location.href = app.uriScheme;
-        // Fallback after timeout if browser remains
         setTimeout(() => {
           if (app.webFallback) {
             window.open(app.webFallback, '_blank');

@@ -355,7 +355,7 @@ export async function executeCommand(
     // Check installed phone apps
     const installedApp = appLauncherService.findAppByQuery(appQuery);
     if (installedApp) {
-      appLauncherService.launchApp(installedApp);
+      await appLauncherService.launchApp(installedApp);
       return `🚀 Запускаю приложение **${installedApp.name}** на телефоне.`;
     }
 
