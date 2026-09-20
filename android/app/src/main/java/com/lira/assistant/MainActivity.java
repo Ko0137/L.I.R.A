@@ -73,6 +73,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            Toast.makeText(this, "Разрешения L.I.R.A. применены", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void setupViewPagerAndNavigation() {
         viewPager.setAdapter(new FragmentStateAdapter(this) {
             @NonNull

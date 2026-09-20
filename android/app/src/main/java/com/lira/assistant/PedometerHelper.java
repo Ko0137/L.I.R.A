@@ -1,12 +1,17 @@
 package com.lira.assistant;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Build;
+import androidx.core.content.ContextCompat;
 
 public class PedometerHelper implements SensorEventListener {
+    private final Context context;
     private final SensorManager sensorManager;
     private final Sensor stepSensor;
     private OnStepCountChangeListener listener;
@@ -18,7 +23,8 @@ public class PedometerHelper implements SensorEventListener {
     }
 
     public PedometerHelper(Context context) {
-        sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
+        this.context = context.getApplicationContext();
+        sensorManager = (SensorManager) this.context.getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
             stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
         } else {
@@ -28,14 +34,28 @@ public class PedometerHelper implements SensorEventListener {
 
     public void startListening(OnStepCountChangeListener listener) {
         this.listener = listener;
-        if (sensorManager != null && stepSensor != null) {
-            sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
+        if (sensorManager == null || stepSensor == null) return;
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
+                    sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
+                }
+            } else {
+                sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     public void stopListening() {
         if (sensorManager != null) {
-            sensorManager.unregisterListener(this);
+            try {
+                sensorManager.unregisterListener(this);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

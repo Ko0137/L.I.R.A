@@ -94,72 +94,88 @@ public class LiraFragment extends Fragment {
     }
 
     private void initSpeechRecognizer() {
-        if (SpeechRecognizer.isRecognitionAvailable(requireContext())) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext());
-            speechRecognizer.setRecognitionListener(new RecognitionListener() {
-                @Override
-                public void onReadyForSpeech(Bundle params) {
-                    tvStatus.setText("🎙️ Слушаю вас...");
-                }
-
-                @Override
-                public void onBeginningOfSpeech() {}
-
-                @Override
-                public void onRmsChanged(float rmsdB) {}
-
-                @Override
-                public void onBufferReceived(byte[] buffer) {}
-
-                @Override
-                public void onEndOfSpeech() {
-                    tvStatus.setText("🟢 L.I.R.A.: Обработка...");
-                }
-
-                @Override
-                public void onError(int error) {
-                    isListening = false;
-                    tvStatus.setText("🟢 L.I.R.A.: Нажмите микрофон");
-                }
-
-                @Override
-                public void onResults(Bundle results) {
-                    isListening = false;
-                    tvStatus.setText("🟢 L.I.R.A.: Готова к командам");
-                    ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if (matches != null && !matches.isEmpty()) {
-                        String spokenText = matches.get(0);
-                        addMessage(spokenText, true);
-                        String reply = commandProcessor.processCommand(spokenText);
-                        addMessage(reply, false);
+        try {
+            if (getContext() != null && SpeechRecognizer.isRecognitionAvailable(requireContext())) {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext());
+                speechRecognizer.setRecognitionListener(new RecognitionListener() {
+                    @Override
+                    public void onReadyForSpeech(Bundle params) {
+                        if (tvStatus != null) tvStatus.setText("🎙️ Слушаю вас...");
                     }
-                }
 
-                @Override
-                public void onPartialResults(Bundle partialResults) {}
+                    @Override
+                    public void onBeginningOfSpeech() {}
 
-                @Override
-                public void onEvent(int eventType, Bundle params) {}
-            });
+                    @Override
+                    public void onRmsChanged(float rmsdB) {}
+
+                    @Override
+                    public void onBufferReceived(byte[] buffer) {}
+
+                    @Override
+                    public void onEndOfSpeech() {
+                        if (tvStatus != null) tvStatus.setText("🟢 L.I.R.A.: Обработка...");
+                    }
+
+                    @Override
+                    public void onError(int error) {
+                        isListening = false;
+                        if (tvStatus != null) tvStatus.setText("🟢 L.I.R.A.: Нажмите микрофон");
+                    }
+
+                    @Override
+                    public void onResults(Bundle results) {
+                        isListening = false;
+                        if (tvStatus != null) tvStatus.setText("🟢 L.I.R.A.: Готова к командам");
+                        if (results != null) {
+                            ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                            if (matches != null && !matches.isEmpty()) {
+                                String spokenText = matches.get(0);
+                                addMessage(spokenText, true);
+                                String reply = commandProcessor.processCommand(spokenText);
+                                addMessage(reply, false);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onPartialResults(Bundle partialResults) {}
+
+                    @Override
+                    public void onEvent(int eventType, Bundle params) {}
+                });
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     private void toggleListening() {
         if (speechRecognizer == null) {
-            Toast.makeText(requireContext(), "Голосовой ввод недоступен", Toast.LENGTH_SHORT).show();
-            return;
+            initSpeechRecognizer();
+            if (speechRecognizer == null) {
+                Toast.makeText(requireContext(), "Голосовой ввод недоступен", Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
 
-        if (!isListening) {
-            isListening = true;
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
-            speechRecognizer.startListening(intent);
-        } else {
+        try {
+            if (!isListening) {
+                isListening = true;
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
+                speechRecognizer.startListening(intent);
+            } else {
+                isListening = false;
+                speechRecognizer.stopListening();
+                if (tvStatus != null) tvStatus.setText("🟢 L.I.R.A.: Готова к командам");
+            }
+        } catch (Exception e) {
             isListening = false;
-            speechRecognizer.stopListening();
-            tvStatus.setText("🟢 L.I.R.A.: Готова к командам");
+            if (tvStatus != null) tvStatus.setText("🟢 L.I.R.A.: Готова к командам");
+            Toast.makeText(requireContext(), "Ошибка запуска микрофона", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
         }
     }
 
