@@ -151,6 +151,12 @@ public class LiraFragment extends Fragment {
     }
 
     private void toggleListening() {
+        if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 100);
+            Toast.makeText(requireContext(), "Разрешите микрофон для использования голосовых команд", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (speechRecognizer == null) {
             initSpeechRecognizer();
             if (speechRecognizer == null) {

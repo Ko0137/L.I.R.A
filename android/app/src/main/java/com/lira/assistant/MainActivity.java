@@ -36,8 +36,6 @@ public class MainActivity extends AppCompatActivity {
         flashlightHelper = new FlashlightHelper(this);
         appLauncherHelper = new AppLauncherHelper(this);
 
-        requestNativePermissions();
-
         setupViewPagerAndNavigation();
         setupTopBarActions();
     }
