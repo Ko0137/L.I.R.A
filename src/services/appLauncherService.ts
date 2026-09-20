@@ -223,30 +223,23 @@ class AppLauncherService {
     try {
       if (Capacitor.isNativePlatform()) {
         if (app.uriScheme) {
-          const canOpen = await AppLauncher.canOpenUrl({ url: app.uriScheme });
-          if (canOpen.value) {
+          try {
             await AppLauncher.openUrl({ url: app.uriScheme });
             return true;
-          }
+          } catch {}
         }
         if (app.packageName) {
-          const pkgScheme = `intent://#Intent;package=${app.packageName};end`;
-          const canOpenPkg = await AppLauncher.canOpenUrl({ url: pkgScheme });
-          if (canOpenPkg.value) {
-            await AppLauncher.openUrl({ url: pkgScheme });
+          try {
+            const intentUri = `intent:#Intent;package=${app.packageName};action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;end`;
+            await AppLauncher.openUrl({ url: intentUri });
             return true;
-          }
+          } catch {}
         }
       }
 
       // Web/Fallback
       if (app.uriScheme && !app.uriScheme.startsWith('http')) {
         window.location.href = app.uriScheme;
-        setTimeout(() => {
-          if (app.webFallback) {
-            window.open(app.webFallback, '_blank');
-          }
-        }, 800);
         return true;
       }
 

@@ -62,7 +62,7 @@ jobs:
               print(f'Updated Gradle versionCode to {run_num} and versionName to 1.2.{run_num}')
           "
 
-      - name: 🖼️ Generate Custom Android App Launcher Icons
+      - name: 🖼️ Generate Multiple Desktop Launcher Icon Themes
         run: |
           python3 -c "
           import os
@@ -76,37 +76,136 @@ jobs:
               'mipmap-xxxhdpi': 192,
           }
 
+          themes = {
+              'ic_launcher': (18, 18, 22, 0, 230, 118),       # Emerald
+              'ic_launcher_emerald': (18, 18, 22, 0, 230, 118),
+              'ic_launcher_glass': (28, 28, 30, 0, 122, 255),  # Glass iOS
+              'ic_launcher_cyber': (10, 14, 42, 0, 240, 255),  # Cyber Sapphire
+              'ic_launcher_amethyst': (20, 5, 36, 224, 64, 251), # Amethyst
+              'ic_launcher_amber': (38, 19, 0, 255, 171, 0),   # Solar Amber
+              'ic_launcher_obsidian': (20, 20, 20, 240, 240, 240), # Obsidian
+              'ic_launcher_mint': (245, 245, 245, 0, 200, 83)  # Mint
+          }
+
           res_dir = 'android/app/src/main/res'
           for folder, size in sizes.items():
               target_folder = os.path.join(res_dir, folder)
               os.makedirs(target_folder, exist_ok=True)
               
-              # Create vibrant dark emerald LIRA launcher icon
-              img = Image.new('RGBA', (size, size), (18, 18, 22, 255))
-              draw = ImageDraw.Draw(img)
-              
-              # Outer neon ring
-              margin = int(size * 0.08)
-              draw.ellipse([margin, margin, size - margin, size - margin], outline=(0, 230, 118, 255), width=max(2, int(size * 0.05)))
-              
-              # Inner pulsing sphere
-              inner_m = int(size * 0.28)
-              draw.ellipse([inner_m, inner_m, size - inner_m, size - inner_m], fill=(0, 230, 118, 220))
-              
-              # Center glowing dot
-              center_m = int(size * 0.42)
-              draw.ellipse([center_m, center_m, size - center_m, size - center_m], fill=(255, 255, 255, 255))
-              
-              img.save(os.path.join(target_folder, 'ic_launcher.png'))
-              img.save(os.path.join(target_folder, 'ic_launcher_round.png'))
-              img.save(os.path.join(target_folder, 'ic_launcher_foreground.png'))
+              for icon_name, (bg_r, bg_g, bg_b, fg_r, fg_g, fg_b) in themes.items():
+                  img = Image.new('RGBA', (size, size), (bg_r, bg_g, bg_b, 255))
+                  draw = ImageDraw.Draw(img)
+                  margin = int(size * 0.08)
+                  draw.ellipse([margin, margin, size - margin, size - margin], outline=(fg_r, fg_g, fg_b, 255), width=max(2, int(size * 0.05)))
+                  inner_m = int(size * 0.28)
+                  draw.ellipse([inner_m, inner_m, size - inner_m, size - inner_m], fill=(fg_r, fg_g, fg_b, 220))
+                  center_m = int(size * 0.42)
+                  draw.ellipse([center_m, center_m, size - center_m, size - center_m], fill=(255, 255, 255, 255))
+                  
+                  img.save(os.path.join(target_folder, f'{icon_name}.png'))
+                  img.save(os.path.join(target_folder, f'{icon_name}_round.png'))
           print('Custom Android desktop launcher icons generated!')
           "
 
-      - name: 🛡️ Inject All Android Permissions & App Shortcuts into Manifest
+      - name: 🧩 Create Android Native Home Screen App Widget
+        run: |
+          python3 -c "
+          import os
+
+          res_xml = 'android/app/src/main/res/xml'
+          res_layout = 'android/app/src/main/res/layout'
+          java_dir = 'android/app/src/main/java/com/lira/assistant'
+
+          os.makedirs(res_xml, exist_ok=True)
+          os.makedirs(res_layout, exist_ok=True)
+          os.makedirs(java_dir, exist_ok=True)
+
+          # 1. Widget Info XML
+          widget_info = '''<?xml version=\"1.0\" encoding=\"utf-8\"?>
+          <appwidget-provider xmlns:android=\"http://schemas.android.com/apk/res/android\"
+              android:minWidth=\"250dp\"
+              android:minHeight=\"100dp\"
+              android:updatePeriodMillis=\"1800000\"
+              android:previewImage=\"@mipmap/ic_launcher\"
+              android:initialLayout=\"@layout/lira_widget_layout\"
+              android:resizeMode=\"horizontal|vertical\"
+              android:widgetCategory=\"home_screen\">
+          </appwidget-provider>
+          '''
+          with open(os.path.join(res_xml, 'lira_widget_info.xml'), 'w', encoding='utf-8') as f:
+              f.write(widget_info)
+
+          # 2. Widget Layout XML
+          widget_layout = '''<?xml version=\"1.0\" encoding=\"utf-8\"?>
+          <LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"
+              android:layout_width=\"match_parent\"
+              android:layout_height=\"match_parent\"
+              android:background=\"#E0121214\"
+              android:orientation=\"horizontal\"
+              android:padding=\"12dp\"
+              android:gravity=\"center\">
+              
+              <TextView
+                  android:id=\"@+id/widget_title\"
+                  android:layout_width=\"0dp\"
+                  android:layout_height=\"wrap_content\"
+                  android:layout_weight=\"1\"
+                  android:text=\"⚡ L.I.R.A.\"
+                  android:textColor=\"#00E676\"
+                  android:textSize=\"18sp\"
+                  android:textStyle=\"bold\" />
+
+              <Button
+                  android:id=\"@+id/btn_voice\"
+                  android:layout_width=\"wrap_content\"
+                  android:layout_height=\"wrap_content\"
+                  android:text=\"🎙️ Голос\"
+                  android:textColor=\"#FFFFFF\"
+                  android:backgroundTint=\"#00E676\" />
+          </LinearLayout>
+          '''
+          with open(os.path.join(res_layout, 'lira_widget_layout.xml'), 'w', encoding='utf-8') as f:
+              f.write(widget_layout)
+
+          # 3. Widget Java Provider Class
+          widget_java = '''package com.lira.assistant;
+
+          import android.app.PendingIntent;
+          import android.appwidget.AppWidgetManager;
+          import android.appwidget.AppWidgetProvider;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.widget.RemoteViews;
+
+          public class LiraWidgetProvider extends AppWidgetProvider {
+              @Override
+              public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+                  for (int appWidgetId : appWidgetIds) {
+                      RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.lira_widget_layout);
+                      
+                      Intent intent = new Intent(context, MainActivity.class);
+                      intent.putExtra(\"action\", \"voice\");
+                      PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                      
+                      views.setOnClickPendingIntent(R.id.btn_voice, pendingIntent);
+                      appWidgetManager.updateAppWidget(appWidgetId, views);
+                  }
+              }
+          }
+          '''
+          with open(os.path.join(java_dir, 'LiraWidgetProvider.java'), 'w', encoding='utf-8') as f:
+              f.write(widget_java)
+
+          print('Android AppWidget files generated!')
+          "
+
+      - name: 🛡️ Inject Queries, Permissions, Widget & Activity Aliases into Manifest
         run: |
           python3 -c "
           manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest_path, 'r', encoding='utf-8') as f:
+              content = f.read()
+
           permissions = [
               'android.permission.INTERNET',
               'android.permission.RECORD_AUDIO',
@@ -126,19 +225,62 @@ jobs:
               'android.permission.POST_NOTIFICATIONS',
               'android.permission.WAKE_LOCK',
               'android.permission.FOREGROUND_SERVICE',
-              'android.permission.FOREGROUND_SERVICE_MICROPHONE'
+              'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+              'android.permission.SYSTEM_ALERT_WINDOW'
           ]
-          with open(manifest_path, 'r', encoding='utf-8') as f:
-              content = f.read()
 
           for p in permissions:
               tag = f'<uses-permission android:name=\"{p}\" />'
               if p not in content:
                   content = content.replace('</manifest>', f'    {tag}\n</manifest>')
 
+          # Inject Queries for Native Package Launching
+          queries_xml = '''
+          <queries>
+              <package android:name=\"org.telegram.messenger\" />
+              <package android:name=\"org.telegram.messenger.web\" />
+              <package android:name=\"com.whatsapp\" />
+              <package android:name=\"com.vkontakte.android\" />
+              <package android:name=\"com.google.android.youtube\" />
+              <package android:name=\"ru.yandex.music\" />
+              <package android:name=\"com.google.android.apps.maps\" />
+              <package android:name=\"ru.yandex.yandexmaps\" />
+              <package android:name=\"ru.yandex.searchplugin\" />
+              <package android:name=\"com.android.chrome\" />
+              <intent>
+                  <action android:name=\"android.intent.action.VIEW\" />
+                  <data android:scheme=\"tg\" />
+              </intent>
+              <intent>
+                  <action android:name=\"android.intent.action.VIEW\" />
+                  <data android:scheme=\"whatsapp\" />
+              </intent>
+              <intent>
+                  <action android:name=\"android.intent.action.VIEW\" />
+                  <data android:scheme=\"vk\" />
+              </intent>
+          </queries>
+          '''
+          if '<queries>' not in content:
+              content = content.replace('</manifest>', f'{queries_xml}\n</manifest>')
+
+          # Inject Widget Receiver into <application>
+          receiver_xml = '''
+              <receiver android:name=\".LiraWidgetProvider\" android:exported=\"true\">
+                  <intent-filter>
+                      <action android:name=\"android.appwidget.action.APPWIDGET_UPDATE\" />
+                  </intent-filter>
+                  <meta-data
+                      android:name=\"android.appwidget.provider\"
+                      android:resource=\"@xml/lira_widget_info\" />
+              </receiver>
+          '''
+          if 'LiraWidgetProvider' not in content:
+              content = content.replace('</application>', f'{receiver_xml}\n</application>')
+
           with open(manifest_path, 'w', encoding='utf-8') as f:
               f.write(content)
-          print('Permissions successfully injected into AndroidManifest.xml')
+          print('Permissions, queries and AppWidget injected into AndroidManifest.xml')
           "
 
       - name: 🔑 Fix Gradle Executable Permissions
