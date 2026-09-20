@@ -50,9 +50,17 @@ public class VibeFragment extends Fragment {
 
         pedometerHelper = new PedometerHelper(requireContext());
         pedometerHelper.startListening((steps, calories, distanceKm) -> {
-            tvStepCount.setText(String.valueOf(steps));
-            tvCalories.setText(String.format(Locale.getDefault(), "%.0f ккал", calories));
-            tvDistance.setText(String.format(Locale.getDefault(), "%.2f км", distanceKm));
+            if (isAdded() && getActivity() != null) {
+                requireActivity().runOnUiThread(() -> {
+                    try {
+                        if (tvStepCount != null) tvStepCount.setText(String.valueOf(steps));
+                        if (tvCalories != null) tvCalories.setText(String.format(Locale.getDefault(), "%.0f ккал", calories));
+                        if (tvDistance != null) tvDistance.setText(String.format(Locale.getDefault(), "%.2f км", distanceKm));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
         });
 
         btnResetPedometer.setOnClickListener(v -> pedometerHelper.resetSteps());

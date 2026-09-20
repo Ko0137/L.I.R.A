@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
 
         setupViewPagerAndNavigation();
         setupTopBarActions();
+        requestNativePermissions();
     }
 
     public FlashlightHelper getFlashlightHelper() {
@@ -49,25 +50,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestNativePermissions() {
-        List<String> permissions = new ArrayList<>();
-        permissions.add(Manifest.permission.RECORD_AUDIO);
-        permissions.add(Manifest.permission.CAMERA);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            permissions.add(Manifest.permission.ACTIVITY_RECOGNITION);
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS);
-        }
-
-        List<String> ungranted = new ArrayList<>();
-        for (String p : permissions) {
-            if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
-                ungranted.add(p);
+        try {
+            List<String> permissions = new ArrayList<>();
+            permissions.add(Manifest.permission.RECORD_AUDIO);
+            permissions.add(Manifest.permission.CAMERA);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                permissions.add(Manifest.permission.ACTIVITY_RECOGNITION);
             }
-        }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
 
-        if (!ungranted.isEmpty()) {
-            ActivityCompat.requestPermissions(this, ungranted.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+            List<String> ungranted = new ArrayList<>();
+            for (String p : permissions) {
+                if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
+                    ungranted.add(p);
+                }
+            }
+
+            if (!ungranted.isEmpty()) {
+                ActivityCompat.requestPermissions(this, ungranted.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -102,10 +107,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageSelected(int position) {
                 super.onPageSelected(position);
-                switch (position) {
-                    case 0: bottomNav.setSelectedItemId(R.id.nav_chat); break;
-                    case 1: bottomNav.setSelectedItemId(R.id.nav_vibe); break;
-                    case 2: bottomNav.setSelectedItemId(R.id.nav_finance); break;
+                int targetId = R.id.nav_chat;
+                if (position == 1) targetId = R.id.nav_vibe;
+                else if (position == 2) targetId = R.id.nav_finance;
+
+                if (bottomNav != null && bottomNav.getSelectedItemId() != targetId) {
+                    bottomNav.setSelectedItemId(targetId);
                 }
             }
         });
@@ -113,13 +120,13 @@ public class MainActivity extends AppCompatActivity {
         bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.nav_chat) {
-                viewPager.setCurrentItem(0, true);
+                if (viewPager.getCurrentItem() != 0) viewPager.setCurrentItem(0, true);
                 return true;
             } else if (itemId == R.id.nav_vibe) {
-                viewPager.setCurrentItem(1, true);
+                if (viewPager.getCurrentItem() != 1) viewPager.setCurrentItem(1, true);
                 return true;
             } else if (itemId == R.id.nav_finance) {
-                viewPager.setCurrentItem(2, true);
+                if (viewPager.getCurrentItem() != 2) viewPager.setCurrentItem(2, true);
                 return true;
             }
             return false;

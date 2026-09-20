@@ -75,7 +75,6 @@ public class FinanceFragment extends Fragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("Новая Операция");
 
-        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.item_chat_message, null); // custom inline layout
         final EditText etTitle = new EditText(requireContext());
         etTitle.setHint("Название (например: Продукты)");
         final EditText etAmount = new EditText(requireContext());
@@ -100,15 +99,19 @@ public class FinanceFragment extends Fragment {
     }
 
     private void addOp(String title, String amountStr, boolean isIncome) {
-        if (title.trim().isEmpty() || amountStr.trim().isEmpty()) return;
-        double amount = Double.parseDouble(amountStr);
-        SimpleDateFormat sdf = new SimpleDateFormat("d MMMM", Locale.getDefault());
-        String date = sdf.format(new Date());
+        if (title == null || title.trim().isEmpty() || amountStr == null || amountStr.trim().isEmpty()) return;
+        try {
+            double amount = Double.parseDouble(amountStr.trim());
+            SimpleDateFormat sdf = new SimpleDateFormat("d MMMM", Locale.getDefault());
+            String date = sdf.format(new Date());
 
-        dbHelper.addTransaction(title, isIncome ? "Доходы" : "Расходы", amount, isIncome, date);
-        transactionList.clear();
-        transactionList.addAll(dbHelper.getTransactions());
-        adapter.notifyDataSetChanged();
-        updateTotals();
+            dbHelper.addTransaction(title.trim(), isIncome ? "Доходы" : "Расходы", amount, isIncome, date);
+            transactionList.clear();
+            transactionList.addAll(dbHelper.getTransactions());
+            adapter.notifyDataSetChanged();
+            updateTotals();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
