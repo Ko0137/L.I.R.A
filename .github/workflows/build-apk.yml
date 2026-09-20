@@ -20,24 +20,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🐘 Setup Gradle
+      - name: 🐘 Setup Gradle & Compile Native Android APK
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.5'
           build-root-directory: 'android'
-
-      - name: 🔧 Generate Gradle Wrapper
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.5
-
-      - name: 🔑 Grant Execute Permission for Gradle Wrapper
-        run: chmod +x android/gradlew
-
-      - name: 🚀 Compile Native Android APK (Gradle)
-        run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          arguments: assembleDebug --no-daemon --stacktrace
 
       - name: 📤 Upload Native APK Artifact
         uses: actions/upload-artifact@v4
@@ -45,3 +33,4 @@ jobs:
           name: LIRA-Native-Android-APK
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
+
