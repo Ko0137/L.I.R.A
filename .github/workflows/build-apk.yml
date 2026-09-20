@@ -14,17 +14,16 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ⚙️ Set up Node.js 20
+      - name: ⚙️ Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
 
-      - name: ☕ Set up Java JDK 17
+      - name: ☕ Set up Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: 📦 Install Node Dependencies
         run: npm install
@@ -34,7 +33,9 @@ jobs:
 
       - name: 📱 Configure Capacitor Android Native Project
         run: |
-          npx cap add android || true
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
       - name: 🔑 Fix Gradle Permissions
@@ -45,7 +46,7 @@ jobs:
       - name: 🚀 Compile Android APK (Gradle)
         run: |
           cd android
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: 📤 Upload Ready APK File
         uses: actions/upload-artifact@v4
