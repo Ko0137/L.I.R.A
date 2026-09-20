@@ -1,5 +1,6 @@
 import { LaunchableApp, ActiveAlarm, CustomMacroCommand, MacroAction, FileCategory } from '../types';
 import { fileScannerService, formatFileSize, formatDateString } from './fileScannerService';
+import { appLauncherService } from './appLauncherService';
 
 export const SYSTEM_APPS: LaunchableApp[] = [
   { id: 'file_scanner', name: 'Файловый сканер', category: 'Система', icon: 'FolderSearch', keywords: ['файлы', 'сканер', 'документы', 'поиск файлов', 'загрузки', 'диск', 'проводник', 'память', 'поиск по файлам'], actionType: 'custom' },
@@ -350,6 +351,15 @@ export async function executeCommand(
       context.onOpenApp(matchedApp);
       return `🚀 Запускаю **${matchedApp.name}**.`;
     }
+
+    // Check installed phone apps
+    const installedApp = appLauncherService.findAppByQuery(appQuery);
+    if (installedApp) {
+      appLauncherService.launchApp(installedApp);
+      return `🚀 Запускаю приложение **${installedApp.name}** на телефоне.`;
+    }
+
+    return `📱 Приложение «${appQuery}» не найдено в списке. Вы можете добавить его ярлык в настройках.`;
   }
 
   // 11. Local File System Scanner & Search (Offline)

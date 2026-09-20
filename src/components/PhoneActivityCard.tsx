@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PhoneActivityStats, AppTheme } from '../types';
 import { triggerVibration, soundManager } from '../utils/sound';
+import { pedometerService } from '../services/pedometerService';
 import {
   Activity,
   Footprints,
@@ -14,6 +15,7 @@ import {
   SlidersHorizontal,
   CheckCircle2,
   X,
+  Compass,
 } from 'lucide-react';
 
 interface PhoneActivityCardProps {

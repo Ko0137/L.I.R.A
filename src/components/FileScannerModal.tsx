@@ -470,10 +470,24 @@ export const FileScannerModal: React.FC<FileScannerModalProps> = ({
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
           {filteredFiles.length === 0 ? (
-            <div className="py-12 text-center space-y-2 opacity-60">
-              <FolderSearch className="w-10 h-10 mx-auto stroke-1" />
-              <p className="text-sm font-semibold">Файлы не найдены</p>
-              <p className="text-xs">Попробуйте изменить поисковый запрос или фильтры</p>
+            <div className="py-12 px-4 text-center space-y-3">
+              <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center bg-[var(--accent-color,#00E676)]/10 text-[var(--accent-color,#00E676)] border border-[var(--accent-color,#00E676)]/20">
+                <FolderSearch className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-white">Локальный индекс пуст</p>
+                <p className="text-xs text-neutral-400 max-w-xs mx-auto">
+                  Выберите файлы или папку на телефоне (Загрузки, Документы, Фото) для быстрого поиска ассистентом.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2.5 rounded-xl bg-[var(--accent-color,#00E676)] text-black font-semibold text-xs inline-flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-[var(--accent-color,#00E676)]/20"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Выбрать файлы / папку телефона</span>
+              </button>
             </div>
           ) : (
             filteredFiles.map(file => {

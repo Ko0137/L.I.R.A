@@ -21,13 +21,7 @@ import { CURRENCY_LIST, CURRENCIES, formatCurrencyAmount, convertAmount } from '
 const STORAGE_FINANCE_KEY = 'lira_finance_transactions_v2';
 const STORAGE_BASE_CURRENCY_KEY = 'lira_finance_base_currency';
 
-const DEFAULT_EXPENSES: ExpenseItem[] = [
-  { id: '1', title: 'Пополнение баланса / Зарплата', amount: 85000, currency: 'RUB', type: 'income', date: 'Сегодня, 11:20' },
-  { id: '2', title: 'Кофе и бизнес-ланч', amount: 650, currency: 'RUB', type: 'expense', date: 'Сегодня, 13:40' },
-  { id: '3', title: 'Оплата хостинга и подписок', amount: 25, currency: 'USD', type: 'expense', date: 'Вчера, 18:10' },
-  { id: '4', title: 'Перевод от партнера', amount: 150, currency: 'USDT', type: 'income', date: '18 Сен, 15:30' },
-  { id: '5', title: 'Продукты на неделю', amount: 4200, currency: 'RUB', type: 'expense', date: '17 Сен, 19:00' },
-];
+const DEFAULT_EXPENSES: ExpenseItem[] = [];
 
 const POPULAR_CATEGORIES = [
   '☕ Еда/Кофе',

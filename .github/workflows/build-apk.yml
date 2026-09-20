@@ -25,6 +25,14 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: 🖼️ Install Pillow for Icon Generation
+        run: pip install pillow
+
       - name: 📦 Install Node Dependencies
         run: npm install
 
@@ -38,7 +46,64 @@ jobs:
           fi
           npx cap sync android
 
-      - name: 🛡️ Inject Android Permissions & Speech Recognition into Manifest
+      - name: 🔄 Set Version Code for Smooth App Updates
+        run: |
+          python3 -c "
+          import re, os
+          gradle_path = 'android/app/build.gradle'
+          if os.path.exists(gradle_path):
+              with open(gradle_path, 'r', encoding='utf-8') as f:
+                  content = f.read()
+              run_num = '${{ github.run_number }}' or '100'
+              content = re.sub(r'versionCode\s+\d+', f'versionCode {run_num}', content)
+              content = re.sub(r'versionName\s+\"[^\"]+\"', f'versionName \"1.2.{run_num}\"', content)
+              with open(gradle_path, 'w', encoding='utf-8') as f:
+                  f.write(content)
+              print(f'Updated Gradle versionCode to {run_num} and versionName to 1.2.{run_num}')
+          "
+
+      - name: 🖼️ Generate Custom Android App Launcher Icons
+        run: |
+          python3 -c "
+          import os
+          from PIL import Image, ImageDraw
+
+          sizes = {
+              'mipmap-mdpi': 48,
+              'mipmap-hdpi': 72,
+              'mipmap-xhdpi': 96,
+              'mipmap-xxhdpi': 144,
+              'mipmap-xxxhdpi': 192,
+          }
+
+          res_dir = 'android/app/src/main/res'
+          for folder, size in sizes.items():
+              target_folder = os.path.join(res_dir, folder)
+              os.makedirs(target_folder, exist_ok=True)
+              
+              # Create vibrant dark emerald LIRA launcher icon
+              img = Image.new('RGBA', (size, size), (18, 18, 22, 255))
+              draw = ImageDraw.Draw(img)
+              
+              # Outer neon ring
+              margin = int(size * 0.08)
+              draw.ellipse([margin, margin, size - margin, size - margin], outline=(0, 230, 118, 255), width=max(2, int(size * 0.05)))
+              
+              # Inner pulsing sphere
+              inner_m = int(size * 0.28)
+              draw.ellipse([inner_m, inner_m, size - inner_m, size - inner_m], fill=(0, 230, 118, 220))
+              
+              # Center glowing dot
+              center_m = int(size * 0.42)
+              draw.ellipse([center_m, center_m, size - center_m, size - center_m], fill=(255, 255, 255, 255))
+              
+              img.save(os.path.join(target_folder, 'ic_launcher.png'))
+              img.save(os.path.join(target_folder, 'ic_launcher_round.png'))
+              img.save(os.path.join(target_folder, 'ic_launcher_foreground.png'))
+          print('Custom Android desktop launcher icons generated!')
+          "
+
+      - name: 🛡️ Inject All Android Permissions & App Shortcuts into Manifest
         run: |
           python3 -c "
           manifest_path = 'android/app/src/main/AndroidManifest.xml'
@@ -46,6 +111,8 @@ jobs:
               'android.permission.INTERNET',
               'android.permission.RECORD_AUDIO',
               'android.permission.MODIFY_AUDIO_SETTINGS',
+              'android.permission.ACTIVITY_RECOGNITION',
+              'android.permission.BODY_SENSORS',
               'android.permission.VIBRATE',
               'android.permission.CAMERA',
               'android.permission.FLASHLIGHT',
@@ -53,7 +120,13 @@ jobs:
               'android.permission.WRITE_EXTERNAL_STORAGE',
               'android.permission.READ_MEDIA_AUDIO',
               'android.permission.READ_MEDIA_IMAGES',
-              'android.permission.POST_NOTIFICATIONS'
+              'android.permission.READ_MEDIA_VIDEO',
+              'android.permission.MANAGE_EXTERNAL_STORAGE',
+              'android.permission.QUERY_ALL_PACKAGES',
+              'android.permission.POST_NOTIFICATIONS',
+              'android.permission.WAKE_LOCK',
+              'android.permission.FOREGROUND_SERVICE',
+              'android.permission.FOREGROUND_SERVICE_MICROPHONE'
           ]
           with open(manifest_path, 'r', encoding='utf-8') as f:
               content = f.read()
@@ -68,7 +141,7 @@ jobs:
           print('Permissions successfully injected into AndroidManifest.xml')
           "
 
-      - name: 🔑 Fix Gradle Permissions
+      - name: 🔑 Fix Gradle Executable Permissions
         run: |
           cd android
           chmod +x ./gradlew

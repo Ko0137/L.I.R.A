@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LaunchableApp, HabitCategory, HabitItem, DailyVibeLog, VibeSettings, AppTheme, PhoneActivityStats } from '../types';
 import { triggerVibration, soundManager } from '../utils/sound';
 import { speechService } from '../services/speechService';
+import { pedometerService, INITIAL_EMPTY_ACTIVITY } from '../services/pedometerService';
 import { PhoneActivityCard } from './PhoneActivityCard';
 import {
   Sparkles,
@@ -72,20 +73,7 @@ const DEFAULT_CATEGORIES: HabitCategory[] = [
 
 const DEFAULT_REST_TAGS = ['Xbox', 'Стрим', 'Клипы / Shorts', 'Бар / встреча', 'Прогулка', 'Фильм'];
 
-const DEFAULT_ACTIVITY: PhoneActivityStats = {
-  steps: 8420,
-  stepsGoal: 10000,
-  calories: 540,
-  caloriesGoal: 650,
-  activeMinutes: 42,
-  distanceKm: 6.3,
-  sleepDuration: '7 ч 25 мин',
-  waterMl: 1750,
-  waterGoalMl: 2500,
-  screenTime: '3 ч 15 мин',
-  lastSynced: 'Сегодня, 14:15',
-  source: 'health_connect',
-};
+const DEFAULT_ACTIVITY: PhoneActivityStats = INITIAL_EMPTY_ACTIVITY;
 
 function formatDateKey(d: Date): string {
   const y = d.getFullYear();
