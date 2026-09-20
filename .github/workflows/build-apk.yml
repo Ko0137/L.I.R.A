@@ -23,6 +23,9 @@ jobs:
       - name: 🐘 Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: 🔑 Grant Execute Permission for Gradle
+        run: chmod +x android/gradlew || true
+
       - name: 🚀 Compile Native Android APK (Gradle)
         run: |
           cd android
