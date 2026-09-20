@@ -23,10 +23,13 @@ import { FlashlightControlModal } from './components/FlashlightControlModal';
 import { RemoteContextMenu } from './components/RemoteContextMenu';
 import { FileScannerModal } from './components/FileScannerModal';
 import { ActionHubModal } from './components/ActionHubModal';
+import { DesktopWidgetModal } from './components/DesktopWidgetModal';
 import { SYSTEM_APPS, executeCommand } from './services/commandProcessor';
 import { speechService } from './services/speechService';
+import { wakeWordService } from './services/wakeWordService';
 import { soundManager, triggerVibration } from './utils/sound';
 import { applyAppIcon, getSavedAppIconId } from './utils/appIcons';
+import { applyThemeToDocument } from './utils/themeEngine';
 import { Flashlight, Pause, SkipForward } from 'lucide-react';
 
 const STORAGE_KEYS = {
@@ -132,12 +135,20 @@ export const App: React.FC = () => {
   const [fileScannerQuery, setFileScannerQuery] = useState('');
   const [fileScannerCategory, setFileScannerCategory] = useState<any>('all');
   const [isActionHubOpen, setIsActionHubOpen] = useState(false);
+  const [isDesktopWidgetOpen, setIsDesktopWidgetOpen] = useState(false);
+  const [isWakeWordActive, setIsWakeWordActive] = useState(false);
+  const [wakeWordStatus, setWakeWordStatus] = useState('Ожидание фразы «Лира...»');
 
   const handleOpenFileScanner = useCallback((query?: string, category?: any) => {
     setFileScannerQuery(query || '');
     setFileScannerCategory(category || 'all');
     setIsFileScannerOpen(true);
   }, []);
+
+  // Apply Theme Colors
+  useEffect(() => {
+    applyThemeToDocument(settings.theme);
+  }, [settings.theme]);
 
   // Apply App Icon
   useEffect(() => {
@@ -468,6 +479,47 @@ export const App: React.FC = () => {
     }
   }, [isListening, currentTab, addMessage, handleProcessCommand, settings]);
 
+  // Toggle Wake-Word "Лира" Continuous Mode
+  const handleToggleWakeWord = useCallback(() => {
+    if (isWakeWordActive) {
+      wakeWordService.stop();
+      setIsWakeWordActive(false);
+      setWakeWordStatus('Фоновый режим выключен');
+      triggerVibration('tap');
+    } else {
+      setIsWakeWordActive(true);
+      triggerVibration('commandSuccess');
+      soundManager.playCommandSuccess();
+      wakeWordService.start(
+        (cmd) => {
+          handleProcessCommand(cmd);
+        },
+        (active, msg) => {
+          if (msg) setWakeWordStatus(msg);
+        }
+      );
+    }
+  }, [isWakeWordActive, handleProcessCommand]);
+
+  // Handle URL shortcut params on mount (from Android App shortcuts)
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const action = urlParams.get('action');
+      if (action === 'voice') {
+        setTimeout(() => handleToggleMic(), 600);
+      } else if (action === 'torch') {
+        setIsTorchOn(prev => !prev);
+      } else if (action === 'files') {
+        handleOpenFileScanner();
+      } else if (action === 'notes') {
+        setIsNotesOpen(true);
+      } else if (action === 'timer') {
+        setIsTimerOpen(true);
+      }
+    } catch {}
+  }, [handleOpenFileScanner, handleToggleMic]);
+
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -631,6 +683,8 @@ export const App: React.FC = () => {
           onOpenHelp={() => setIsHelpOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenRemote={() => setIsRemoteMenuOpen(true)}
+          onOpenWidgets={() => setIsDesktopWidgetOpen(true)}
+          isWakeWordActive={isWakeWordActive}
           theme={effectiveTheme}
         />
 
@@ -891,6 +945,16 @@ export const App: React.FC = () => {
           onOpenRemote={() => setIsRemoteMenuOpen(true)}
           onOpenFileScanner={(query, category) => handleOpenFileScanner(query, category)}
           onOpenFlashlightModal={() => setIsFlashlightModalOpen(true)}
+        />
+
+        <DesktopWidgetModal
+          isOpen={isDesktopWidgetOpen}
+          onClose={() => setIsDesktopWidgetOpen(false)}
+          settings={settings}
+          onUpdateSettings={setSettings}
+          onToggleWakeWord={handleToggleWakeWord}
+          isWakeWordActive={isWakeWordActive}
+          wakeWordStatus={wakeWordStatus}
         />
       </div>
     </div>

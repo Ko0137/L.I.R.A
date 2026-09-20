@@ -5,7 +5,16 @@ export interface ChatMessage {
   time: string;
 }
 
-export type AppTheme = 'dark' | 'light' | 'ios' | 'cyber';
+export type AppTheme = 
+  | 'dark' 
+  | 'light' 
+  | 'ios' 
+  | 'cyber' 
+  | 'purple' 
+  | 'cobalt' 
+  | 'amber' 
+  | 'crimson' 
+  | 'monochrome';
 
 export type NavTab = 'chat' | 'vibe' | 'finance';
 
@@ -74,6 +83,7 @@ export interface SettingsState {
   primaryCurrency: CurrencyCode;
   micSoundEffect?: MicSoundEffect;
   appIcon?: string;
+  wakeWordEnabled?: boolean;
   privacyAccepted: boolean;
   customCommands: Record<string, string>;
   macroCommands: CustomMacroCommand[];

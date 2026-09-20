@@ -436,9 +436,111 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               {/* Theme selection */}
               <div>
                 <label className="block text-[11px] text-white/70 font-medium mb-1.5">
-                  Стиль и цветовая тема интерфейса
+                  Стиль и цветовая тема интерфейса (6 неоновых и классических тем)
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerVibration('selection');
+                      setTheme('cyber');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                      theme === 'cyber' || theme === 'dark'
+                        ? 'bg-[#00E676]/20 border-[#00E676] text-white shadow-sm ring-1 ring-[#00E676]'
+                        : 'bg-[#262628] border-white/10 text-white/70 hover:bg-[#303034]'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-[#00E676] shadow-sm shadow-[#00E676]/50" />
+                    <span className="font-bold text-[11px]">Изумруд</span>
+                    <span className="text-[9px] opacity-60">Cyber L.I.R.A.</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerVibration('selection');
+                      setTheme('purple');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                      theme === 'purple'
+                        ? 'bg-[#B388FF]/20 border-[#B388FF] text-white shadow-sm ring-1 ring-[#B388FF]'
+                        : 'bg-[#262628] border-white/10 text-white/70 hover:bg-[#303034]'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-[#B388FF] shadow-sm shadow-[#B388FF]/50" />
+                    <span className="font-bold text-[11px]">Аметист</span>
+                    <span className="text-[9px] opacity-60">Неоновый пурпур</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerVibration('selection');
+                      setTheme('cobalt');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                      theme === 'cobalt'
+                        ? 'bg-[#00B0FF]/20 border-[#00B0FF] text-white shadow-sm ring-1 ring-[#00B0FF]'
+                        : 'bg-[#262628] border-white/10 text-white/70 hover:bg-[#303034]'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-[#00B0FF] shadow-sm shadow-[#00B0FF]/50" />
+                    <span className="font-bold text-[11px]">Кобальт</span>
+                    <span className="text-[9px] opacity-60">Сапфировый</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerVibration('selection');
+                      setTheme('amber');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                      theme === 'amber'
+                        ? 'bg-[#FFD600]/20 border-[#FFD600] text-white shadow-sm ring-1 ring-[#FFD600]'
+                        : 'bg-[#262628] border-white/10 text-white/70 hover:bg-[#303034]'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-[#FFD600] shadow-sm shadow-[#FFD600]/50" />
+                    <span className="font-bold text-[11px]">Янтарь</span>
+                    <span className="text-[9px] opacity-60">Золотой закат</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerVibration('selection');
+                      setTheme('crimson');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                      theme === 'crimson'
+                        ? 'bg-[#FF1744]/20 border-[#FF1744] text-white shadow-sm ring-1 ring-[#FF1744]'
+                        : 'bg-[#262628] border-white/10 text-white/70 hover:bg-[#303034]'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-[#FF1744] shadow-sm shadow-[#FF1744]/50" />
+                    <span className="font-bold text-[11px]">Рубин</span>
+                    <span className="text-[9px] opacity-60">Багровый неон</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerVibration('selection');
+                      setTheme('monochrome');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                      theme === 'monochrome'
+                        ? 'bg-white/20 border-white text-white shadow-sm ring-1 ring-white'
+                        : 'bg-[#262628] border-white/10 text-white/70 hover:bg-[#303034]'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white shadow-sm shadow-white/50" />
+                    <span className="font-bold text-[11px]">OLED Титан</span>
+                    <span className="text-[9px] opacity-60">Монохром</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -447,30 +549,13 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     }}
                     className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
                       theme === 'ios'
-                        ? 'bg-[#007AFF]/30 border-[#007AFF] text-white shadow-sm'
-                        : 'bg-[#262628] border-white/10 text-white/70'
+                        ? 'bg-[#007AFF]/30 border-[#007AFF] text-white shadow-sm ring-1 ring-[#007AFF]'
+                        : 'bg-[#262628] border-white/10 text-white/70 hover:bg-[#303034]'
                     }`}
                   >
                     <Smartphone className="w-4 h-4 text-[#007AFF]" />
                     <span className="font-bold text-[11px]">iOS Glass</span>
-                    <span className="text-[9px] opacity-60">Стеклянная</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerVibration('selection');
-                      setTheme('dark');
-                    }}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
-                      theme === 'dark'
-                        ? 'bg-[#1B4D3E] border-[#00E676] text-white shadow-sm'
-                        : 'bg-[#262628] border-white/10 text-white/70'
-                    }`}
-                  >
-                    <Moon className="w-4 h-4 text-[#00E676]" />
-                    <span className="font-bold text-[11px]">Obsidian</span>
-                    <span className="text-[9px] opacity-60">Тёмный изумруд</span>
+                    <span className="text-[9px] opacity-60">Cupertino</span>
                   </button>
 
                   <button
@@ -481,30 +566,13 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     }}
                     className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
                       theme === 'light'
-                        ? 'bg-[#2E7D32] border-[#00E676] text-white shadow-sm'
-                        : 'bg-[#262628] border-white/10 text-white/70'
+                        ? 'bg-[#2E7D32] border-[#00E676] text-white shadow-sm ring-1 ring-[#00E676]'
+                        : 'bg-[#262628] border-white/10 text-white/70 hover:bg-[#303034]'
                     }`}
                   >
                     <Sun className="w-4 h-4 text-amber-400" />
                     <span className="font-bold text-[11px]">Porcelain</span>
                     <span className="text-[9px] opacity-60">Светлая</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerVibration('selection');
-                      setTheme('cyber');
-                    }}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
-                      theme === 'cyber'
-                        ? 'bg-[#00F0FF]/25 border-[#00F0FF] text-[#00F0FF] shadow-sm'
-                        : 'bg-[#262628] border-white/10 text-white/70'
-                    }`}
-                  >
-                    <Zap className="w-4 h-4 text-[#00F0FF]" />
-                    <span className="font-bold text-[11px]">Cyberpunk</span>
-                    <span className="text-[9px] opacity-60">Неон</span>
                   </button>
                 </div>
               </div>
