@@ -117,6 +117,54 @@
             app:useMaterialThemeColors="true" />
     </LinearLayout>
 
+    <!-- Section 5: App Icon Theme Selector -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="🎨 Иконка Приложения (Дизайн)"
+        android:textColor="@color/primary_emerald"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/rg_icon_theme"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:background="@color/bg_card"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <RadioButton
+            android:id="@+id/rb_icon_emerald"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🟢 Иконка Emerald (Изумрудная)"
+            android:textColor="@color/text_white" />
+
+        <RadioButton
+            android:id="@+id/rb_icon_violet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🟣 Иконка Neon Violet (Неон)"
+            android:textColor="@color/text_white" />
+
+        <RadioButton
+            android:id="@+id/rb_icon_gold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🟡 Иконка Cyber Gold (Золотая)"
+            android:textColor="@color/text_white" />
+
+        <RadioButton
+            android:id="@+id/rb_icon_blue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔵 Иконка Crystal Blue (Лазурная)"
+            android:textColor="@color/text_white" />
+    </RadioGroup>
+
     <Button
         android:id="@+id/btn_close_settings"
         android:layout_width="match_parent"

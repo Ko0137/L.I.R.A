@@ -49,24 +49,51 @@ public class VibeFragment extends Fragment {
         rvHabits.setAdapter(habitsAdapter);
 
         pedometerHelper = new PedometerHelper(requireContext());
-        pedometerHelper.startListening((steps, calories, distanceKm) -> {
-            if (isAdded() && getActivity() != null) {
-                requireActivity().runOnUiThread(() -> {
-                    try {
-                        if (tvStepCount != null) tvStepCount.setText(String.valueOf(steps));
-                        if (tvCalories != null) tvCalories.setText(String.format(Locale.getDefault(), "%.0f ккал", calories));
-                        if (tvDistance != null) tvDistance.setText(String.format(Locale.getDefault(), "%.2f км", distanceKm));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
-            }
-        });
 
-        btnResetPedometer.setOnClickListener(v -> pedometerHelper.resetSteps());
+        btnResetPedometer.setOnClickListener(v -> {
+            if (pedometerHelper != null) pedometerHelper.resetSteps();
+        });
         btnAddHabit.setOnClickListener(v -> showAddHabitDialog());
 
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        checkAndStartPedometer();
+    }
+
+    private void checkAndStartPedometer() {
+        try {
+            android.content.SharedPreferences prefs = requireContext().getSharedPreferences("lira_settings", android.content.Context.MODE_PRIVATE);
+            boolean isEnabled = prefs.getBoolean("pref_pedometer", false);
+            
+            boolean hasPermission = true;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.ACTIVITY_RECOGNITION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            }
+
+            if (isEnabled && hasPermission) {
+                pedometerHelper.startListening((steps, calories, distanceKm) -> {
+                    if (isAdded() && getActivity() != null) {
+                        requireActivity().runOnUiThread(() -> {
+                            try {
+                                if (tvStepCount != null) tvStepCount.setText(String.valueOf(steps));
+                                if (tvCalories != null) tvCalories.setText(String.format(Locale.getDefault(), "%.0f ккал", calories));
+                                if (tvDistance != null) tvDistance.setText(String.format(Locale.getDefault(), "%.2f км", distanceKm));
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+                    }
+                });
+            } else {
+                if (tvStepCount != null) tvStepCount.setText("Выкл (Настройки)");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void showAddHabitDialog() {

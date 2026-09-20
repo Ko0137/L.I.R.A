@@ -36,7 +36,12 @@ public class FloatingWidgetService extends Service {
                     .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                     .setPriority(NotificationCompat.PRIORITY_LOW)
                     .build();
-            startForeground(1001, notification);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(1001, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            } else {
+                startForeground(1001, notification);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

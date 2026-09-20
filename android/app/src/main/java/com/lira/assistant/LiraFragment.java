@@ -67,8 +67,6 @@ public class LiraFragment extends Fragment {
             commandProcessor = new CommandProcessor(requireContext(), new FlashlightHelper(requireContext()), new AppLauncherHelper(requireContext()));
         }
 
-        initSpeechRecognizer();
-
         btnSend.setOnClickListener(v -> sendMessage());
         fabMic.setOnClickListener(v -> toggleListening());
 
@@ -156,16 +154,27 @@ public class LiraFragment extends Fragment {
     }
 
     private void toggleListening() {
+        android.content.SharedPreferences prefs = requireContext().getSharedPreferences("lira_settings", android.content.Context.MODE_PRIVATE);
+        boolean isMicEnabled = prefs.getBoolean("pref_mic", false);
+
+        if (!isMicEnabled) {
+            Toast.makeText(requireContext(), "Включите переключатель 'Запись голоса' в Настройках ⚙️", Toast.LENGTH_LONG).show();
+            if (getActivity() != null) {
+                new SettingsDialog(getActivity()).show();
+            }
+            return;
+        }
+
         if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 100);
-            Toast.makeText(requireContext(), "Разрешите микрофон для использования голосовых команд", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Разрешите микрофон в появившемся окне", Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (speechRecognizer == null) {
             initSpeechRecognizer();
             if (speechRecognizer == null) {
-                Toast.makeText(requireContext(), "Голосовой ввод недоступен", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Голосовой ввод недоступен на данном устройстве", Toast.LENGTH_SHORT).show();
                 return;
             }
         }
